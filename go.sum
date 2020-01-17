@@ -28,6 +28,8 @@ flamingo.me/form v1.0.1-0.20191008191024-ff6f3a9330d6 h1:IjB4m3ry8c2G3OCAaPTwqQF
 flamingo.me/form v1.0.1-0.20191008191024-ff6f3a9330d6/go.mod h1:vr043GHK3X/0W1ZIGDJBBic94piMMTm5TzXupcPvprQ=
 flamingo.me/graphql v1.0.1 h1:tovhUIzBoJtUl5A2/xE/tDfcQkDfd9IONuSy/perRKg=
 flamingo.me/graphql v1.0.1/go.mod h1:JfIijC5pf1WqeSJjtTGljqNkG19n18EBZuC7uy0VoFc=
+flamingo.me/graphql v1.0.2-0.20200109090653-271ced2b302c h1:10GmuF0BtiqfwvfTQhiNC0jOI9mSnnbwanWe4zD+s44=
+flamingo.me/graphql v1.0.2-0.20200109090653-271ced2b302c/go.mod h1:JfIijC5pf1WqeSJjtTGljqNkG19n18EBZuC7uy0VoFc=
 flamingo.me/pugtemplate v1.0.0 h1:aatUrrp/9+TxmVOkUUCcrY0a4aR6YCzmT5ZYUIy7ygE=
 flamingo.me/pugtemplate v1.0.0/go.mod h1:2Aj4xrnyOb4FZTzgwHho/ui05St3ya5IXPd17mqlL1Y=
 github.com/99designs/gqlgen v0.9.0 h1:g1arBPML74Vqv0L3Q+TqIhGXLspV+2MYtRLkBxuZrlE=
