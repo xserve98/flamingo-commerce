@@ -17,7 +17,10 @@ import (
 	"flamingo.me/flamingo/v3/core/oauth/domain"
 	"flamingo.me/flamingo/v3/framework/flamingo"
 	"flamingo.me/flamingo/v3/framework/web"
+	"github.com/coreos/go-oidc"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/oauth2"
 )
 
 type (
@@ -199,7 +202,9 @@ func (m *MockDeliveryInfoBuilder) BuildByDeliveryCode(deliveryCode string) (*car
 }
 
 type (
-	MockUserService struct{}
+	MockUserService struct {
+		LoggedIn bool
+	}
 )
 
 var _ authApplication.UserServiceInterface = (*MockUserService)(nil)
@@ -211,7 +216,33 @@ func (m *MockUserService) GetUser(ctx context.Context, session *web.Session) *do
 }
 
 func (m *MockUserService) IsLoggedIn(ctx context.Context, session *web.Session) bool {
-	return true
+	return m.LoggedIn
+}
+
+type (
+	MockAuthManager struct {
+		ShouldReturnError bool
+	}
+	MockTokenSource struct {
+	}
+)
+
+var _ cartApplication.AuthManagerInterface = &MockAuthManager{}
+var _ oauth2.TokenSource = &MockTokenSource{}
+
+func (m MockTokenSource) Token() (*oauth2.Token, error) {
+	return &oauth2.Token{}, nil
+}
+
+func (m MockAuthManager) Auth(_ context.Context, _ *web.Session) (domain.Auth, error) {
+	if m.ShouldReturnError {
+		return domain.Auth{}, errors.New("generic auth error")
+	}
+
+	return domain.Auth{
+		TokenSource: &MockTokenSource{},
+		IDToken:     &oidc.IDToken{},
+	}, nil
 }
 
 func TestCartReceiverService_ShouldHaveGuestCart(t *testing.T) {
@@ -927,4 +958,75 @@ func TestCartReceiverService_RestoreCart(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCartReceiverService_ModifyBehaviour(t *testing.T) {
+	t.Run("get guest behaviour", func(t *testing.T) {
+		cs := &cartApplication.CartReceiverService{}
+		cs.Inject(
+			&MockGuestCartServiceAdapter{},
+			&MockCustomerCartService{},
+			&decorator.DecoratedCartFactory{},
+			&MockAuthManager{},
+			&MockUserService{LoggedIn: false},
+			flamingo.NullLogger{},
+			nil,
+			&struct {
+				CartCache cartApplication.CartCache `inject:",optional"`
+			}{
+				CartCache: &MockCartCache{},
+			},
+		)
+
+		behaviour, err := cs.ModifyBehaviour(context.Background())
+
+		assert.NoError(t, err)
+		assert.IsType(t, behaviour, &cartInfrastructure.InMemoryBehaviour{})
+	})
+
+	t.Run("get customer behaviour", func(t *testing.T) {
+		cs := &cartApplication.CartReceiverService{}
+		cs.Inject(
+			&MockGuestCartServiceAdapter{},
+			&MockCustomerCartService{},
+			&decorator.DecoratedCartFactory{},
+			&MockAuthManager{},
+			&MockUserService{LoggedIn: true},
+			flamingo.NullLogger{},
+			nil,
+			&struct {
+				CartCache cartApplication.CartCache `inject:",optional"`
+			}{
+				CartCache: &MockCartCache{},
+			},
+		)
+
+		behaviour, err := cs.ModifyBehaviour(context.Background())
+
+		assert.NoError(t, err)
+		assert.IsType(t, behaviour, &cartInfrastructure.InMemoryBehaviour{})
+	})
+
+	t.Run("error during customer auth should lead to error", func(t *testing.T) {
+		cs := &cartApplication.CartReceiverService{}
+		cs.Inject(
+			&MockGuestCartServiceAdapter{},
+			&MockCustomerCartService{},
+			&decorator.DecoratedCartFactory{},
+			&MockAuthManager{ShouldReturnError: true},
+			&MockUserService{LoggedIn: true},
+			flamingo.NullLogger{},
+			nil,
+			&struct {
+				CartCache cartApplication.CartCache `inject:",optional"`
+			}{
+				CartCache: &MockCartCache{},
+			},
+		)
+
+		behaviour, err := cs.ModifyBehaviour(context.Background())
+
+		assert.Error(t, err)
+		assert.Nil(t, behaviour)
+	})
 }
